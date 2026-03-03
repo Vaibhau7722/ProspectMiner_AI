@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - '5000:5000'
+    env_file: ./backend/.env
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./backend/logs:/app/logs
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: node src/workers/index.js
+    env_file: ./backend/.env
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '3000:80'
+    depends_on:
+      - api
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: prospectminer
+
+volumes:
+  redis_data:
+  mongo_data:
